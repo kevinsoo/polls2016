@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "###########################################################\n#### This compares polling data with final election results\n#### Author: Kevin Soo\n#### Run after clean_polls.R and scrape_results.R\n###########################################################\n\n# load libraries\nlibrary(tidyverse)\nlibrary(stringr)\nlibrary(rvest)\ntheme_set(theme_bw())\n\n# load data\nload(file=\"election.Rda\")\nload(file=\"polls.Rda\")\n\n# make sure state names are the same\npolls$State <- ifelse(polls$State==\"District of Columbia\", \"Washington DC\", as.character(polls$State))\npolls$State <- as.factor(polls$State)\n\n# filter out unique congressional districts\npolls <- polls %>% \n    filter(!State %in% c(\"Nebraska CD-1\", \"Nebraska CD-2\", \"Nebraska CD-3\", \"Maine CD-1\", \"Maine CD-2\"))\n\n# reorder states\npolls$State <- as.character(polls$State)\nelection$State <- as.character(election$State)\npolls <- polls %>% arrange(State)\nelection <- election %>% arrange(State)\npolls$State <- as.factor(polls$State)\nelection$State <- as.factor(election$State)\n\n# match election results to poll by state\npolls$Votes <- NA\npolls$Election <- NA\nfor (i in 1:nrow(polls)) {\n    polls$Votes[i] <- filter(election,\n                             State==as.character(polls$State[i]), \n                             Candidate==as.character(polls$Candidate[i]))$Votes\n    polls$Election[i] <- filter(election, \n                                State==as.character(polls$State[i]), \n                                Candidate==as.character(polls$Candidate[i]))$Level\n}\n\n# calculate error, difference is actual-polls, so we see how much actual results are different from the projections\npolls$Error <- polls$Election - polls$Level\n\n# bind winner\npolls$Winner <- NA\nfor (i in 1:nrow(polls)) {\n    result <- filter(election, State==polls$State[i]) %>% arrange(-Level)\n    polls$Winner[i] <- as.character(result$Candidate[1])\n}\npolls$Winner <- as.factor(polls$Winner)\n\n# save data\nsave(polls, file=\"polls.Rda\")\n",
+    "created" : 1479261392563.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2735696680",
+    "id" : "3F7D2DF0",
+    "lastKnownWriteTime" : 1481385478,
+    "last_content_update" : 1481385478577,
+    "path" : "~/Box Sync/Personal/polls/compare_polls_election.R",
+    "project_path" : "compare_polls_election.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
