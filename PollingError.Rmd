@@ -165,4 +165,4 @@ In states where polls showed a Trump victory, the actual margin would be larger 
 
 ### 6 Conclusion
 
-As stated above, there's been a ton of analysis about how the polls missed Trump's win. This post has avoided those issues, except to show that there are specific ways that the polls did and did not get things right. This has mainly been an excuse for me to write some code to scrape election results (though I suppose in time they would all have been released in an easily-accessible form). I'm planning to write more on this -- I would love to talk if you have any ideas for interesting analyses!
+As stated above, there's been a ton of analysis about how the polls missed Trump's win. This post has avoided those issues, except to show that there are specific ways that the polls did and did not get things right. This started mainly as an exercise in [scraping election results](https://github.com/kevinsoo/polls2016/blob/master/scrape_results.R) (though I suppose in time they would all have been released in an easily-accessible form). I'm planning to write more on the data presented here -- I would love to talk if you have any ideas for interesting analyses!
