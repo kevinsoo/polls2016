@@ -6,8 +6,6 @@
 
 # load libraries
 library(tidyverse)
-library(stringr)
-library(rvest)
 
 # load data
 polls2016 <- read.csv("president_general_polls_2016.csv")

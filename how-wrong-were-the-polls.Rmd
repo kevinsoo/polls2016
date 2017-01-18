@@ -21,39 +21,45 @@ library(reshape2)
 library(ggthemes)
 
 # load polling data
-load(file="polls.Rda")
 load(file="election.Rda")
+load(file="polls.Rda")
 
 # calculate difference
-difference <- polls %>% filter(Type=="Raw") %>% 
+difference <- polls %>% filter(Type=="Raw", Population=="lv") %>% 
     group_by(ID, State, End, SampleSize, Winner) %>% 
-    summarise(Difference=diff(Level), Error=Difference-diff(Election)) %>%
+    summarise(DifferencePoll=diff(Level), DifferenceElection=diff(Election)) %>%
     arrange(ID)
-difference$Difference <- difference$Difference*(-1)
-difference$PollLeader <- as.factor(ifelse(difference$Difference>0, "Clinton",
-                                          ifelse(difference$Difference<0, "Trump", "Even")))
+difference$DifferencePoll <- difference$DifferencePoll*(-1)
+difference$DifferenceElection <- difference$DifferenceElection*(-1)
+# error = final difference - poll difference, so +ve error means actual difference > projected difference
+difference$Error <- difference$DifferenceElection - difference$DifferencePoll
+difference$ElectionWinner <- as.factor(ifelse(difference$DifferenceElection>0, "Clinton",
+                                          ifelse(difference$DifferenceElection<0, "Trump", "Even")))
+difference$PollLeader <- as.factor(ifelse(difference$DifferencePoll>0, "Clinton",
+                                          ifelse(difference$DifferencePoll<0, "Trump", "Even")))
 ```
 
 ***
 
 ### 1 Background
 
-Going into the 2016 Presidential Election, most pollsters were [confident](http://www.nytimes.com/interactive/2016/upshot/presidential-polls-forecast.html) of a Clinton win. The aftermath of Trump's win resulted in many questions being asked of pollsters and speculation as to how so many got it wrong. I won't get into the reasons why; [here](http://fivethirtyeight.com/features/the-polls-missed-trump-we-asked-pollsters-why/) are [some](http://www.vox.com/mischiefs-of-faction/2016/11/9/13574824/polls-clinton-trump) [articles](http://www.theatlantic.com/politics/archive/2016/11/what-went-wrong-polling-clinton-trump/507188/) with [coverage](https://www.theguardian.com/commentisfree/2016/nov/09/polls-wrong-donald-trump-election) [on](http://www.nytimes.com/interactive/2016/11/13/upshot/putting-the-polling-miss-of-2016-in-perspective.html) [that](http://www.npr.org/2016/11/14/502014643/4-possible-reasons-the-polls-got-it-so-wrong-this-year). Instead, I want to focus on quantifying and visualizing the amount of error in the polls -- where were they wrong, and how were they wrong? I used polling data collected by [FiveThirtyEight](http://projects.fivethirtyeight.com/general-model/president_general_polls_2016.csv) and scraped the final results from the [BBC](http://www.bbc.co.uk/news/election/us2016/results) website.
+Going into the 2016 Presidential Election, most pollsters were [confident](http://www.nytimes.com/interactive/2016/upshot/presidential-polls-forecast.html) of a Clinton win. The aftermath of Trump's win resulted in many questions being asked of pollsters and speculation as to how so many got it wrong. I won't get into the reasons why; [here](http://fivethirtyeight.com/features/the-polls-missed-trump-we-asked-pollsters-why/) are [some](http://www.vox.com/mischiefs-of-faction/2016/11/9/13574824/polls-clinton-trump) [articles](http://www.theatlantic.com/politics/archive/2016/11/what-went-wrong-polling-clinton-trump/507188/) with [coverage](https://www.theguardian.com/commentisfree/2016/nov/09/polls-wrong-donald-trump-election) [on](http://www.nytimes.com/interactive/2016/11/13/upshot/putting-the-polling-miss-of-2016-in-perspective.html) [that](http://www.npr.org/2016/11/14/502014643/4-possible-reasons-the-polls-got-it-so-wrong-this-year). Instead, I want to focus on quantifying and visualizing the amount of error in the polls -- where were they wrong, and how were they wrong? I used polling data collected by [FiveThirtyEight](http://projects.fivethirtyeight.com/general-model/president_general_polls_2016.csv) and scraped the final results from [David Wasserman](https://docs.google.com/spreadsheets/d/133Eb4qQmOxNvtesw2hdVns073R68EZx4SfCnP4IGQf8/htmlview?sle=true).
 
 *Note: FiveThirtyEight's dataset of poll results includes both raw and adjusted results. [Adjusted results](http://fivethirtyeight.com/features/a-users-guide-to-fivethirtyeights-2016-general-election-forecast/) correct for historical biases in different pollsters, and can be useful for eliminating some noise from our visualizations (assuming we trust FiveThirtyEight's adjustments). However, because I'm primarily interested in visualizing how the polls actually did, my analyses make use of the raw data, unless stated otherwise.*
 
 ### 2 The popular-vote margin
 
-How well did the polls predict the margin between Trump and Clinton in the popular vote? The following plot shows the distribution of projected margins from national-level polls conducted in the two weeks prior to Election Day (n = 363). In the final popular-vote tally, Clinton beat Trump by a margin of 1.97% (more than 2.6 million votes). The projected margin (estimated from the average of the polls in the final two weeks) was 2.18%. The polls appeared to do pretty well here -- the projected margin was not significantly different from the final (actual) margin.
+How well did the polls predict the margin between Trump and Clinton in the popular vote? The following plot shows the distribution of projected margins from national-level polls conducted on likely voters in the two weeks prior to Election Day (n = 348). In the final popular-vote tally, Clinton beat Trump by a margin of 2.1% (more than 2.86 million votes). The projected margin (estimated from the average of the polls in the final two weeks) was 2.2%. The polls appeared to do pretty well here -- the projected margin was not significantly different from the final (actual) margin.
 
 ```{r difference, echo=FALSE, message=FALSE, fig.align="center", fig.height=3.5}
 # plot distribution of differences in national-level polls
 d <- difference %>% filter(State=="U.S.", End>as.numeric(as.Date(("2016-10-24"))))
-ggplot(data=d, aes(x=Difference)) +
+
+ggplot(data=d, aes(x=DifferencePoll)) +
     geom_histogram(binwidth=.5) +
-    geom_vline(xintercept=mean(d$Difference), linetype="dashed") +
+    geom_vline(xintercept=mean(d$DifferencePoll), linetype="dashed") +
     geom_vline(xintercept=filter(election, State=="U.S.", Candidate=="Clinton")$Level-filter(election, State=="U.S.", Candidate=="Trump")$Level, color="#3399FF") +
-    geom_label(angle = 90, x=mean(d$Difference), y=12, label="Projected", size=3) +
+    geom_label(angle = 90, x=mean(d$DifferencePoll), y=12, label="Projected", size=3) +
     geom_label(angle = 90, x=filter(election, State=="U.S.", Candidate=="Clinton")$Level-filter(election, State=="U.S.", Candidate=="Trump")$Level, y=18, label="Final", size=3, color="#3399FF") +
     scale_color_manual(values=c("#3399FF", "#FF3333")) +
     theme_minimal() +
@@ -69,7 +75,7 @@ The national-level polls in that final period did pretty well in estimating the 
 
 The polls underestimated the vote-shares of both Clinton and Trump. If the polls were not biased, the error for both candidates in all polls would be centered around zero. In the following plot, we see that the errors were consistently above zero. Error was the difference between the final and predicted vote-share (from a given poll) for a particular candidate -- positive (negative) error means a poll underestimated (overestimated) the final outcome.
 
-```{r errors, echo=FALSE, message=FALSE, fig.align="center"}
+```{r errors, echo=FALSE, message=FALSE, fig.align="center", fig.height=3.5}
 # plot all national-level polls over time
 polls %>% filter(Type=="Raw", State=="U.S.", End>as.numeric(as.Date(("2016-10-24")))) %>% 
     ggplot(aes(x=Error, fill=Candidate, condition=Candidate)) +
@@ -84,9 +90,9 @@ polls %>% filter(Type=="Raw", State=="U.S.", End>as.numeric(as.Date(("2016-10-24
          caption = "\nNegative values = Polls overestimated actual vote-share\nPositive values = Polls underestimated actual vote-share")
 ```
 
-Visually, it appears that roughly the same number of polls overestimated Clinton and or Trump (the density plots for both candidates have roughly the same area within the range of negative errors). However, it seems that the largest number of polls underestimating Clinton did so by around 3--4 percentage points (notice the peak of Clinton's density plot), while more polls that underestimated Trump did so by larger amounts (notice the fatter tail of Trump's plot, indicating positive skew in the errors).
+Visually, it appears that slightly more polls overestimated Trump than Clinton (Trump's distribution shows slightly more polls within the range of negative errors). Most polls underestimated both candidates. However, it seems that the largest number of polls underestimating Clinton did so by around 4 percentage points (notice the peak of Clinton's density plot), while more polls that underestimated Trump did so by larger amounts (notice the fatter tail of Trump's plot, indicating positive skew in the errors).
 
-From this sample of polls in the two weeks immediately preceeding Election day, national-level polls were generally accurate about the margin between the candidates (projecting ~2% lead for Clinton), but underestimated the vote-shares of both candidates. Polls underestimated Clinton mostly by about 3--4 percentage points, while there was more variability in how much they underestimated Trump. Quite a few polls underestimated him by quite a bit -- by more than 5 percentage points!
+From this sample of polls in the two weeks immediately preceeding Election day, national-level polls were generally accurate about the margin between the candidates (projecting ~2% lead for Clinton), but underestimated the vote-shares of both candidates. Polls underestimated Clinton mostly by about 4 percentage points, while there was more variability in how much they underestimated Trump. Quite a few polls underestimated him by quite a bit -- by more than 5 percentage points!
 
 ### 4 Popular-vote share over the (long) campaign
 
@@ -157,12 +163,12 @@ ggplot(data=d, aes(x=State, y=Error.M, label=State)) +
 
 A few things jump out from this plot:
 
-* The majority of polls underestimated Trump, except for 11 states that either got the margin right (New York) or underestimated Clinton (Illinois, Washington, Massachusetts, Connecticut, Nevada, Rhode Island, California, Hawaii, and DC).
-* Looking only at states that Clinton won, polling error was distributed quite symmetrically -- she was overestimated in some states, underestimated in others. This is what you'd expect for both candidates and the set of states they won if there's nothing systematically wrong with the polls.
+* The majority of polls underestimated Trump (ie. had positive errors), except for 11 states that either got the margin right (Colorado and Washington, both correctly projecting a Clinton win) or underestimated Clinton (ie. had positive errors) -- New York, Massachusetts, Connecticut, Nevada, Illinois, New Mexico, Rhode Island, California, Hawaii, and the District of Columbia.
+* Looking only at states that Clinton won, polling error was distributed quite symmetrically -- she was overestimated in some states, underestimated in others. This is what you'd expect for both candidates and the set of states they won if there was nothing systematically wrong with the polls.
 * Trump was underestimated in every single state that he won, suggesting there was a systematic bias in polling within those states. If there was no systematic bias, we would expect the errors to be distributed more evenly around 0.
 
 In states where polls showed a Trump victory, the actual margin would be larger than projected. In states where polls showed a narrow Clinton victory, the amount of bias played a big role -- if the polling was biased against Trump sufficiently, the actual outcome would be flipped. This mattered most of all in several close swing states where Clinton was expected to win but ended up losing.
 
 ### 6 Conclusion
 
-As stated above, there's been a ton of analysis about how the polls missed Trump's win. This post has avoided those issues, except to show that there are specific ways that the polls did and did not get things right. This started mainly as an exercise in [scraping election results](https://github.com/kevinsoo/polls2016/blob/master/scrape_results.R) (though I suppose in time they would all have been released in an easily-accessible form). I'm planning to write more on the data presented here -- I would love to talk if you have any ideas for interesting analyses!
+As stated above, there's been a ton of analysis about how the polls missed Trump's win. This post has avoided those issues, except to show that there are specific ways that the polls did and did not get things right. I'm planning to write more on the data presented here -- I would love to talk if you have any ideas for interesting analyses!

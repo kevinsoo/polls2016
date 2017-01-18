@@ -1,0 +1,82 @@
+---
+title: "The events that turned the election"
+author: "Kevin Soo"
+date: "December 22, 2016"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: no
+  pdf_document:
+    toc: yes
+    toc_depth: '6'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load packages
+library(tidyverse)
+library(reshape2)
+
+# load polling data
+load(file="polls.Rda")
+
+# get relevant polling data
+polls <- polls %>% filter(Type=="Adjusted") %>% 
+    select(Candidate, State, ID, End, Level, SampleSize)
+
+# get average polling at each time point for each candidate
+clintonPolls <- polls %>% filter(Candidate=="Clinton") %>%
+    group_by(State, End) %>% summarise(N=sum(SampleSize), Clinton=mean(Level)) %>%
+    arrange(State, End) 
+trumpPolls <- polls %>% filter(Candidate=="Trump") %>% arrange(End) %>%
+    group_by(State, End) %>% summarise(Trump=mean(Level)) %>%
+    arrange(State, End)
+
+# combine into single data frame, calculate difference
+t <- as.numeric(clintonPolls$End)
+Period <- t - (min(t)-1)
+polls <- data.frame(Period, merge(clintonPolls, trumpPolls))
+polls$Difference <- polls$Clinton - polls$Trump # positive difference = Clinton lead
+polls$Leader <- as.factor(ifelse(polls$Difference>0, "Clinton",
+                                 ifelse(polls$Difference<0, "Trump", "Even")))
+```
+
+***
+
+### 1 Outline
+
+The outcome of the 2016 Presidential Election was a surprise in light of polling data (which I explored in a [previous post]()). Clinton held a lead going into election day -- but how steady was this lead? Did specific events change the tide, leading to [Clinton losing](http://www.salon.com/2016/12/26/13-theories-on-why-trump-won-and-how-clinton-lost_partner/) and [Trump gaining](http://www.vox.com/policy-and-politics/2016/11/11/13578618/why-did-trump-win) ground? 
+
+To answer this question, I analyzed the polling averages before and after key events in the presidential campaign. If there were significant changes in projected support levels, we could potentially figure out 1) if the event was a change-point in the race's trend, and 2) if it caused a change in the support for one or both candidates. I used Google's `CausalImpact` [package](https://google.github.io/CausalImpact/CausalImpact.html) to estimate the causal effect of interventions at particular points in time.
+
+For a general picture of the effect of these events, I'll first look for change-points in national-level polls (which predicted the final margin [more accurately than state-level polls]()). In subsequent analyses, I'll look at state-level polls -- perhaps voters in different states changed their minds differently in response to the same events. 
+
+*To reduce noise, I used the [adjusted polls](http://fivethirtyeight.com/features/a-users-guide-to-fivethirtyeights-2016-general-election-forecast/) (these account for historical biases in different pollsters).*
+
+### 2 The debates
+
+Can presidential debates turn the tide in a race? Evidence from [political](http://www.vox.com/2016/9/12/12847632/debates-trump-clinton-polls-political-science) and [communication](http://www.theatlantic.com/magazine/archive/2016/10/who-will-win/497561/) sciences suggest that debates don't always matter, but what did the polls show?
+
+#### 2.1 The first debate (9/26/2016)
+
+```{r debate1, echo=FALSE, message=FALSE, fig.align="center", fig.height=3.5}
+# import libraries
+library(CausalImpact)
+
+# national polls
+us <- polls %>% filter(State=="U.S.")
+
+# data from first debate
+pre.period <- c(299,324)
+post.period <- c(325,338)
+impact <- CausalImpact(deb1$Difference, pre.period, post.period)
+plot(impact)
+```
+
+
+
+### 3 The conventions
+
+### 4 Breaking news

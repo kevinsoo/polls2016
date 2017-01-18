@@ -1,21 +1,17 @@
-###########################################################
+#############################################################
 #### This compares polling data with final election results
 #### Author: Kevin Soo
-#### Run after clean_polls.R and scrape_results.R
-###########################################################
+#### Run after clean_polls.R and clean_election2016_results.R
+#############################################################
 
 # load libraries
 library(tidyverse)
-library(stringr)
-library(rvest)
-theme_set(theme_bw())
 
 # load data
 load(file="election.Rda")
 load(file="polls.Rda")
 
 # make sure state names are the same
-polls$State <- ifelse(polls$State=="District of Columbia", "Washington DC", as.character(polls$State))
 polls$State <- as.factor(polls$State)
 
 # filter out unique congressional districts
@@ -43,6 +39,7 @@ for (i in 1:nrow(polls)) {
 }
 
 # calculate error, difference is actual-polls, so we see how much actual results are different from the projections
+# error = final result - poll result, so +ve error means actual result > projected result
 polls$Error <- polls$Election - polls$Level
 
 # bind winner
