@@ -6,6 +6,9 @@
 # libraries
 library(tidyverse)
 library(maps)
+library(geosphere)
+library(RColorBrewer)
+library(scales)
 
 # get fips codes
 fips <- county.fips
@@ -82,20 +85,93 @@ for (i in 1:nrow(df)) {
     df$diffNation_2016[i] <- filter(nations, Nation==df$Nation[i])$Diff
 }
 
-# save df for analyses
+# save df for analyses - this is the key data frame, use for stats
 county2016 <- df
 save(county2016, file="county2016.Rda")
 
-# merge with county data
+# merge with county data - this is the data for mapping
 map2016 <- merge(counties, df, by="CountyFIPS") %>% select(-state, -county)
 map2016$CountyFIPS <- as.factor(map2016$CountyFIPS)
 map2016$Winner_2016 <- as.factor(map2016$Winner_2016)
 save(map2016, file="map2016.Rda")
 
+########## get outline for nations
+
+# get outlines of country/states for plotting
+country <- map_data("usa") # us border
+states <- map_data("state") # state borders
+
+# nation borders - locate duplicate points in different nations
+nations <- map2016 %>% group_by(Long, Lat) %>% summarise(N=n()) %>% arrange(-N) %>% filter(N>0)
+map2016$nationBorder <- 0
+map2016$countryBorder <- 0
+for (i in 1:nrow(map2016)) {
+    # identify points of intersection
+    if ((map2016$Long[i] %in% nations$Long)&&(map2016$Lat[i] %in% nations$Lat)) {
+        tmp <- filter(map2016, Long==Long[i], Lat==Lat[i])
+        # identify if those intersection points are across nations
+        if (length(unique(tmp$Nation))>1) {
+            map2016$nationBorder[i] <- 1
+        }
+    }
+    # identify points from country border
+    if ((map2016$Long[i] %in% country$long)&&(map2016$Lat[i] %in% country$lat)) {
+        map2016$countryBorder[i] <- 1
+    }
+    print(i/nrow(map2016))
+}
+
+# save points in map that are nation borders
+nations <- map2016 %>% filter(nationBorder==1) %>% 
+    select(Long, Lat, County, StateCode, State, NationCode, Nation, Group, Order)
+save(nations, file="nations.Rda")
+write.csv(nations, file="nations.csv")
+
+
+
+
+
+
+
+
+
+
+
 ############ create plots
-ggplot(map2016, aes(Long, Lat, group=Group)) +
-    geom_polygon(aes(fill=diff_2016), colour = "black") + 
-    # geom_polygon(aes(fill = diff_2016)) +
+ggplot(map2016, aes(Long, Lat)) +
+    geom_polygon(aes(group=Group, fill=diff_2016), color="white", size=.1) + 
+    # geom_polygon(data=states, aes(long, lat, group=group), fill=NA, colour = "black", size=.2) + 
+    geom_polygon(data=country, aes(long, lat, group=group), fill=NA, colour = "black", size=.2) + 
+    geom_path(data=nations, aes(Long, Lat, group=Group), colour = "black", size=.2) + 
     coord_map("bonne", param=45) +
-    scale_fill_gradient(high=c("#0000FF"), low=c("#FF0000"), limits=c(-90,90)) +
+    scale_fill_gradient2(high=c("#3399FF"), mid="white", low=c("#FF3333")) +
+    theme_void()
+
+nations <- nations %>% arrange(Nation, Group, Order)
+nations %>% group_by(Long, Lat) %>% summarise(N=n()) %>% arrange(-N)
+
+
+
+
+
+
+ggplot(filter(map2016, Nation %in% c("Deep South", "New France", "New France-Deep South")), aes(Long, Lat)) +
+    geom_polygon(aes(group=Group, fill=Nation, alpha=diff_2016), colour = "white", size=.1) + 
+    coord_map("bonne", param=45) +
+    theme_void()
+
+    ggplot(map2016, aes(Long, Lat)) +
+    geom_polygon(aes(group=Group, fill=Nation), colour = "white", size=.1) + 
+    coord_map("bonne", param=45) +
+    theme_void()
+
+
+
+
+ggplot(map2016, aes(Long, Lat)) +
+    geom_polygon(aes(group=Group, fill=diff_2016), colour=NA, size=.2) + 
+    # geom_polygon(data=nations, aes(group=Nation), colour="black", size=2) + 
+    geom_path(data=leftcoast, aes(), colour="black", size=.2) + 
+    coord_map("bonne", param=45) +
+    scale_fill_gradient2(high=c("#3399FF"), mid="white", low=c("#FF3333")) +
     theme_void()
