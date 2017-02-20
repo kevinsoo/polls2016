@@ -79,7 +79,7 @@ p2 <- ggplot(county2016, aes(x=diff_2016, fill=Winner_2016)) +
 plot_grid(p1, p2, align="h")
 ```
 
-It seems that in the absence of any information, it's safer to guess that a rondomly drawn county voted for Trump. Additionally, it's safe to guess that the victory margin of a randomly drawn county leans pretty heavily towards Trump. On the surface, this goes against the fact that Clinton won the popular vote (as I had [previously written about](https://kevinsoo.github.io/BetweenTwoWaves/posts/how-wrong-were-the-polls.html)).
+It seems that in the absence of any information, it's safer to guess that a randomly drawn county voted for Trump. Additionally, it's safe to guess that the victory margin of a randomly drawn county leans pretty heavily towards Trump. On the surface, this goes against the fact that Clinton won the popular vote (as I had [previously written about](https://kevinsoo.github.io/BetweenTwoWaves/posts/how-wrong-were-the-polls.html)).
 
 ### 3 Cities Vs. Flyover Country
 
